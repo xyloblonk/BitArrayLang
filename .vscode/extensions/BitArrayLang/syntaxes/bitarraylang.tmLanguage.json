@@ -1,0 +1,41 @@
+{
+  "scopeName": "source.bal",
+  "name": "BitArrayLang",
+  "patterns": [
+    {
+      "name": "comment.line.double-slash.bal",
+      "match": "//.*$"
+    },
+    {
+      "name": "keyword.control.bal",
+      "match": "\\b(func|def|if|else|loop|return|const|type|var|import)\\b"
+    },
+    {
+      "name": "constant.numeric.bal",
+      "match": "\\b(0x[0-9a-fA-F]+|[0-9]+)\\b"
+    },
+    {
+      "name": "string.quoted.double.bal",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.bal",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "variable.parameter.bal",
+      "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+    },
+    {
+      "name": "punctuation.bal",
+      "match": "[{}\\[\\],:=();]"
+    },
+    {
+      "name": "keyword.operator.bal",
+      "match": "=>|==|!=|<=|>=|<|>|&|\\+|\\-|\\*|\\/|="
+    }
+  ]
+}
