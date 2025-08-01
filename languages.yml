@@ -1,0 +1,8 @@
+BitArrayLang:
+  type: programming
+  extensions:
+    - ".bal"
+  tm_scope: source.bal
+  ace_mode: text
+  color: "#AA22FF"
+  grammar: bitarraylang.sublime-syntax
