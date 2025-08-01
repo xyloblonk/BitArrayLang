@@ -1,0 +1,69 @@
+start: statement+
+
+statement: import_stmt
+         | type_decl
+         | const_decl
+         | func_def
+         | var_assign
+         | loop_stmt
+         | if_stmt
+         | expr_stmt
+         | instruction_stmt
+         | COMMENT
+
+import_stmt: "import" STRING
+
+type_decl: "type" CNAME "=" type_def
+
+type_def: "bits" INT
+        | "enum" "{" enum_members "}"
+
+enum_members: enum_member ("," enum_member)*
+
+enum_member: CNAME "=" INT
+
+const_decl: "const" CNAME "=" value
+
+func_def: "func" CNAME CNAME? "{" statement* "}"
+
+loop_stmt: "loop" "(" var_assign ";" expr ";" var_assign ")" "{" statement* "}"
+
+if_stmt: "if" "(" expr ")" "{" statement* "}" ("else" "{" statement* "}")?
+
+expr_stmt: expr
+
+expr: expr bin_op expr  -> bin_expr
+    | unary_op expr     -> unary_expr
+    | atom
+
+bin_op: "+" | "-" | "*" | "/" | "&" | "|" | "^" | "==" | "!=" | "<" | ">" | "<=" | ">="
+unary_op: "-" | "!"
+
+atom: CNAME
+    | INT
+    | HEX
+    | BIN
+    | STRING
+    | func_call
+    | "(" expr ")"
+
+func_call: CNAME "(" [expr ("," expr)*] ")"
+
+var_assign: "var" CNAME "=" expr
+
+instruction_stmt: "{" instruction_field+ "}"
+
+instruction_field: "instruction:" STRING
+                 | "field:" expr
+
+value: INT | HEX | BIN | STRING
+
+COMMENT: /\/\/[^\n]*/
+
+%import common.CNAME
+%import common.INT
+%import common.HEX_NUMBER -> HEX
+%import common.WS
+%import common.STRING
+%ignore WS
+%ignore COMMENT
