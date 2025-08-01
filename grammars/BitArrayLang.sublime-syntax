@@ -1,0 +1,269 @@
+%YAML 1.2
+---
+name: BitArrayLang
+file_extensions:
+  - bal
+scope: source.bal
+
+contexts:
+  main:
+    # Comments
+    - match: '//.*$'
+      scope: comment.line.double-slash.bal
+
+    # Import statement: import "string"
+    - match: \bimport\b
+      scope: keyword.control.import.bal
+      push: import-stmt
+
+    # Type declaration: type <name> = <type_def>
+    - match: \btype\b
+      scope: keyword.control.type.bal
+      push: type-decl
+
+    # Const declaration: const <name> = <value>
+    - match: \bconst\b
+      scope: keyword.control.const.bal
+      push: const-decl
+
+    # Function definition: func <name> [<name>] { ... }
+    - match: \bfunc\b
+      scope: keyword.control.func.bal
+      push: func-def
+
+    # Loop statement: loop (<var_assign> ; <expr> ; <var_assign>) { ... }
+    - match: \bloop\b
+      scope: keyword.control.loop.bal
+      push: loop-stmt
+
+    # If statement: if (<expr>) { ... } [else { ... }]
+    - match: \bif\b
+      scope: keyword.control.if.bal
+      push: if-stmt
+
+    # Variable assignment: var <name> = <expr>
+    - match: \bvar\b
+      scope: keyword.control.var.bal
+      push: var-assign
+
+    # Instruction statement: { instruction_field+ }
+    - match: '{'
+      scope: punctuation.section.block.bal
+      push: instruction-stmt
+
+    # Expressions fallback
+    - include: expression
+
+  # Import statement body (expect STRING)
+  import-stmt:
+    - match: '"([^"\\]|\\.)*"'
+      scope: string.quoted.double.bal
+      pop: true
+    - match: ''
+      pop: true  # fail safe
+
+  # Type declaration: type <CNAME> = <type_def>
+  type-decl:
+    - match: '\b([a-zA-Z_][a-zA-Z0-9_]*)\b'
+      scope: entity.name.type.bal
+      set:
+        - match: '='
+          scope: keyword.operator.assignment.bal
+          push: type-def
+        - pop: true
+
+  # Type definition: bits INT | enum { enum_members }
+  type-def:
+    - match: '\bbits\b'
+      scope: keyword.other.bits.bal
+      push: bits-type
+    - match: '\benum\b'
+      scope: keyword.other.enum.bal
+      push: enum-type
+    - pop: true
+
+  bits-type:
+    - match: '\b\d+\b'
+      scope: constant.numeric.bal
+      pop: true
+
+  enum-type:
+    - match: '{'
+      scope: punctuation.section.enum.begin.bal
+      push: enum-members
+    - pop: true
+
+  enum-members:
+    - match: '\b([a-zA-Z_][a-zA-Z0-9_]*)\b'
+      scope: entity.name.enum-member.bal
+      push: enum-member-assignment
+    - match: ','
+      scope: punctuation.separator.enum.bal
+    - match: '}'
+      scope: punctuation.section.enum.end.bal
+      pop: true
+
+  enum-member-assignment:
+    - match: '='
+      scope: keyword.operator.assignment.bal
+      push: enum-member-value
+    - pop: true
+
+  enum-member-value:
+    - match: '\b\d+\b'
+      scope: constant.numeric.bal
+      pop: 2  # pop enum-member-value and enum-member-assignment
+
+  # Const declaration: const <name> = <value>
+  const-decl:
+    - match: '\b([a-zA-Z_][a-zA-Z0-9_]*)\b'
+      scope: variable.other.constant.bal
+      set:
+        - match: '='
+          scope: keyword.operator.assignment.bal
+          push: value
+        - pop: true
+
+  value:
+    - match: '\b0x[0-9a-fA-F]+\b'
+      scope: constant.numeric.hex.bal
+      pop: true
+    - match: '\b\d+\b'
+      scope: constant.numeric.decimal.bal
+      pop: true
+    - match: '"([^"\\]|\\.)*"'
+      scope: string.quoted.double.bal
+      pop: true
+    - match: '\b0b[01]+\b'
+      scope: constant.numeric.binary.bal
+      pop: true
+    - pop: true
+
+  # Function definition: func <name> [<name>] { statements* }
+  func-def:
+    - match: '\b([a-zA-Z_][a-zA-Z0-9_]*)\b'
+      scope: entity.name.function.bal
+      push: func-def-params
+    - pop: true
+
+  func-def-params:
+    - match: '\b([a-zA-Z_][a-zA-Z0-9_]*)\b'
+      scope: variable.parameter.function.bal
+    - match: '{'
+      scope: punctuation.section.block.begin.bal
+      push: main
+    - pop: true
+
+  # Loop statement: loop ( var_assign ; expr ; var_assign ) { statements* }
+  loop-stmt:
+    - match: '\('
+      scope: punctuation.section.parens.begin.bal
+      push: loop-params
+    - pop: true
+
+  loop-params:
+    - include: var-assign
+    - match: ';'
+      scope: punctuation.separator.semicolon.bal
+    - include: expression
+    - match: ')'
+      scope: punctuation.section.parens.end.bal
+      push: loop-body
+
+  loop-body:
+    - match: '{'
+      scope: punctuation.section.block.begin.bal
+      push: main
+    - pop: true
+
+  # If statement: if (expr) { statements* } [else { statements* }]
+  if-stmt:
+    - match: '\('
+      scope: punctuation.section.parens.begin.bal
+      push: expression-paren
+    - pop: true
+
+  expression-paren:
+    - include: expression
+    - match: '\)'
+      scope: punctuation.section.parens.end.bal
+      push: if-body
+
+  if-body:
+    - match: '{'
+      scope: punctuation.section.block.begin.bal
+      push: main
+    - match: '\belse\b'
+      scope: keyword.control.else.bal
+      push: else-body
+    - pop: true
+
+  else-body:
+    - match: '{'
+      scope: punctuation.section.block.begin.bal
+      push: main
+    - pop: true
+
+  # Variable assignment: var <name> = expr
+  var-assign:
+    - match: '\bvar\b'
+      scope: keyword.control.var.bal
+      push: var-assign-body
+
+  var-assign-body:
+    - match: '\b([a-zA-Z_][a-zA-Z0-9_]*)\b'
+      scope: variable.other.assignment.bal
+      set:
+        - match: '='
+          scope: keyword.operator.assignment.bal
+          push: expression
+        - pop: true
+
+  # Instruction statement: { instruction_field+ }
+  instruction-stmt:
+    - match: '}'
+      scope: punctuation.section.block.end.bal
+      pop: true
+    - match: '\binstruction:\b'
+      scope: keyword.other.instruction.bal
+      push: instruction-string
+    - match: '\bfield:\b'
+      scope: keyword.other.field.bal
+      push: expression
+    - match: '\s+'
+      scope: whitespace.bal
+    - match: '.'
+      scope: invalid.illegal.bal
+
+  instruction-string:
+    - match: '"([^"\\]|\\.)*"'
+      scope: string.quoted.double.bal
+      pop: true
+
+  # Expressions
+  expression:
+    - include: binary-expression
+
+  binary-expression:
+    - match: \b([a-zA-Z_][a-zA-Z0-9_]*)\b
+      scope: variable.other.bal
+    - match: \b0x[0-9a-fA-F]+\b
+      scope: constant.numeric.hex.bal
+    - match: \b0b[01]+\b
+      scope: constant.numeric.binary.bal
+    - match: \b\d+\b
+      scope: constant.numeric.decimal.bal
+    - match: '"([^"\\]|\\.)*"'
+      scope: string.quoted.double.bal
+    - match: '\('
+      scope: punctuation.section.parens.begin.bal
+      push: expression-paren
+    - match: '\)'
+      scope: punctuation.section.parens.end.bal
+      pop: true
+    - match: \b(func|def|if|else|loop|return|const|type|var|import)\b
+      scope: keyword.control.bal
+    - match: '=>|==|!=|<=|>=|<|>|&|\+|\-|\*|\/|='
+      scope: keyword.operator.bal
+    # For brevity, unary and binary operators can be enhanced further if needed
+
